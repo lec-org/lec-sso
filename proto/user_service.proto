@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package sso.user.v1;
+
+// UserService: 负责用户目录管理
+service UserService {
+  // 用户注册
+  rpc Register(RegisterRequest) returns (User);
+  // 查找用户 (通过ID, username, email)
+  rpc FindUser(FindUserRequest) returns (User);
+  // 更新用户状态
+  rpc UpdateUserStatus(UpdateUserStatusRequest) returns (User);
+  // 检查用户名/邮箱是否存在
+  rpc CheckExistence(CheckExistenceRequest) returns (CheckExistenceResponse);
+  // ... 其他用户管理接口
+}
+
+message User {
+  string id = 1;
+  string tenant_id = 2;
+  string username = 3;
+  string email = 4;
+  string phone_number = 5;
+  string display_name = 6;
+  string status = 7;
+}
+
+message RegisterRequest {
+  string tenant_id = 1;
+  string username = 2;
+  string password = 3;
+  optional string email = 4;
+  optional string display_name = 5;
+}

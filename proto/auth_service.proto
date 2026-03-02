@@ -1,0 +1,126 @@
+syntax = "proto3";
+
+package sso.auth.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+// AuthService: 处理核心认证与令牌操作
+service AuthService {
+  // 用户名密码登录
+  rpc Login(LoginRequest) returns (LoginResponse);
+  // 登出 (销毁会话)
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  // 颁发 OIDC 授权码
+  rpc IssueCode(IssueCodeRequest) returns (IssueCodeResponse);
+  // 颁发令牌 (授权码/Refresh Token模式)
+  rpc IssueToken(IssueTokenRequest) returns (IssueTokenResponse);
+  // 刷新令牌
+  rpc RefreshToken(RefreshTokenRequest) returns (IssueTokenResponse);
+  // 令牌自省
+  rpc IntrospectToken(IntrospectTokenRequest) returns (IntrospectTokenResponse);
+  // 撤销令牌
+  rpc RevokeToken(RevokeTokenRequest) returns (RevokeTokenResponse);
+}
+
+// 登录请求
+message LoginRequest {
+  string tenant_id = 1;
+  string username = 2;
+  string password = 3;
+  // 可选的 MFA code
+  optional string totp_code = 4;
+}
+
+// 登录响应
+message LoginResponse {
+  string session_id = 1;
+  string user_id = 2;
+}
+
+// 登出请求
+message LogoutRequest {
+  string tenant_id = 1;
+  string user_id = 2;
+  optional string session_id = 3; // 可选，不传则销毁该用户所有会话
+}
+
+// 登出响应
+message LogoutResponse {
+  bool success = 1;
+  optional string message = 2; // 失败时的提示信息
+}
+
+// 颁发授权码请求
+message IssueCodeRequest {
+  string tenant_id = 1;
+  string client_id = 2;
+  string redirect_uri = 3;
+  string response_type = 4; // "code"
+  string scope = 5; // 权限范围，如 "openid email profile"
+  optional string state = 6; // 防CSRF的随机字符串
+  string user_id = 7; // 已登录的用户ID
+}
+
+// 颁发授权码响应
+message IssueCodeResponse {
+  string code = 1; // 授权码
+  optional string state = 2;
+}
+
+// 颁发令牌请求
+message IssueTokenRequest {
+  string tenant_id = 1;
+  string grant_type = 2; // "authorization_code", "refresh_token", "client_credentials"
+  string code = 3; // 授权码（grant_type=authorization_code时必填）
+  string refresh_token = 4; // 刷新令牌（grant_type=refresh_token时必填）
+  string client_id = 5;
+  optional string code_verifier = 6; // PKCE验证器
+  optional string redirect_uri = 7; // 与授权码请求时的redirect_uri一致
+}
+
+// 颁发令牌响应
+message IssueTokenResponse {
+  string access_token = 1;
+  string id_token = 2;
+  optional string refresh_token = 3;
+  int32 expires_in = 4; // access_token过期时间（秒）
+  string token_type = 5; // "Bearer"
+}
+
+// 刷新令牌请求
+message RefreshTokenRequest {
+  string tenant_id = 1;
+  string refresh_token = 2;
+  string client_id = 3;
+}
+
+// 令牌自省请求
+message IntrospectTokenRequest {
+  string tenant_id = 1;
+  string token = 2;
+}
+
+// 令牌自省响应
+message IntrospectTokenResponse {
+  bool active = 1; // 令牌是否有效
+  optional string scope = 2;
+  optional string client_id = 3;
+  optional string user_id = 4;
+  optional int64 exp = 5; // 过期时间戳
+  optional int64 iat = 6; // 签发时间戳
+}
+
+// 撤销令牌请求
+message RevokeTokenRequest {
+  string tenant_id = 1;
+  string token = 2; // 要撤销的令牌（access_token/refresh_token）
+  string token_type_hint = 3; // "access_token" 或 "refresh_token"
+  string client_id = 4;
+}
+
+// 撤销令牌响应
+message RevokeTokenResponse {
+  bool success = 1;
+  optional string message = 2;
+}
